@@ -49,7 +49,7 @@
     <maven-assembly-plugin.version>3.7.1</maven-assembly-plugin.version>
 
     <!-- Fat-JAR entry point for standalone server mode -->
-    <main.class>io.vectorcache.VectorCacheServer</main.class>
+    <main.class>io.vectorcache.Main</main.class>
   </properties>
 
   <!-- ═══════════════════════════════════════════════════════════════

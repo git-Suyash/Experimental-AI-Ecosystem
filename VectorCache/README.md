@@ -96,18 +96,21 @@ srv.shutdown();
 # Build first
 mvn package -DskipTests
 
-# Run on default port 8080
-java -jar target/vectorcache-1.0.0-server.jar
+# Run server on default port 8080
+java -jar target/vectorcache-1.0.0-server.jar server
 
-# Run on custom port
-java -jar target/vectorcache-1.0.0-server.jar 9090
+# Run server on custom port
+java -jar target/vectorcache-1.0.0-server.jar server 9090
+
+# Run library demo
+java -jar target/vectorcache-1.0.0-server.jar library
 
 # Recommended JVM flags for production
 java \
   -XX:+UseContainerSupport \
   -XX:MaxRAMPercentage=75.0 \
   -XX:+ExitOnOutOfMemoryError \
-  -jar target/vectorcache-1.0.0-server.jar 8080
+  -jar target/vectorcache-1.0.0-server.jar server 8080
 ```
 
 ---
@@ -158,12 +161,12 @@ docker build -f docker/Dockerfile -t vectorcache:1.0.0 -t vectorcache:latest .
 
 ```bash
 # Basic run
-docker run -p 8080:8080 vectorcache:latest
+docker run -p 8080:8080 vectorcache:latest server
 
 # With persistent access logs
 docker run -p 8080:8080 \
   -v /host/path/logs:/app/logs \
-  vectorcache:latest
+  vectorcache:latest server
 
 # Production run with resource limits
 docker run \
@@ -171,7 +174,7 @@ docker run \
   -m 1g \
   --cpus="2" \
   -v /var/log/vectorcache:/app/logs \
-  vectorcache:latest
+  vectorcache:latest server
 ```
 
 ### Docker Compose
@@ -180,6 +183,7 @@ docker run \
 services:
   vectorcache:
     image: vectorcache:1.0.0
+    command: ["server"]
     ports:
       - "8080:8080"
     volumes:

@@ -1,3 +1,16 @@
+.vscode
+
+target/
+*.class
+*.log
+logs/
+dependency-reduced-pom.xml
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+
 # dependencies (bun install)
 node_modules
 

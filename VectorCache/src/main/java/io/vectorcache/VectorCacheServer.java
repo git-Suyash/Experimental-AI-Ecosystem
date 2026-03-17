@@ -11,31 +11,33 @@ import java.time.format.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.logging.*;
+// import java.util.logging.*;
 import java.util.stream.*;
 
 /**
  * VectorCacheServer — HTTP REST driver for {@link VectorCache}.
  *
- * <p>Manages a singleton {@link VectorCache} instance. Configure and launch
+ * <p>
+ * Manages a singleton {@link VectorCache} instance. Configure and launch
  * via the fluent {@link Builder}:
  *
  * <pre>{@code
- *   VectorCacheServer server = VectorCacheServer.builder()
- *       .httpPort(8080)
- *       .cacheConfig(VectorCache.Config.builder()
- *           .capacity(50_000)
- *           .maxMemoryMb(512)
- *           .ttlMs(TimeUnit.HOURS.toMillis(1))
- *           .build())
- *       .accessLogPath("logs/vector-cache-access.log")
- *       .accessLogAsync(true)
- *       .build();
+ * VectorCacheServer server = VectorCacheServer.builder()
+ *         .httpPort(8080)
+ *         .cacheConfig(VectorCache.Config.builder()
+ *                 .capacity(50_000)
+ *                 .maxMemoryMb(512)
+ *                 .ttlMs(TimeUnit.HOURS.toMillis(1))
+ *                 .build())
+ *         .accessLogPath("logs/vector-cache-access.log")
+ *         .accessLogAsync(true)
+ *         .build();
  *
- *   server.start();
+ * server.start();
  * }</pre>
  *
  * <h2>REST Endpoints</h2>
+ * 
  * <pre>
  *   PUT    /cache/{id}               — store an embedding
  *   GET    /cache/{id}               — retrieve an entry
@@ -50,6 +52,7 @@ import java.util.stream.*;
  * </pre>
  *
  * <h2>Access Log Format (TSV)</h2>
+ * 
  * <pre>
  *   timestamp\tmethod\tpath\tkey\toperation\tstatus\tdurationMs\tremoteAddr
  * </pre>
@@ -75,33 +78,50 @@ public class VectorCacheServer {
     // Builder / factory
     // ═══════════════════════════════════════════════════════════════
 
-    public static Builder builder() { return new Builder(); }
+    public static Builder builder() {
+        return new Builder();
+    }
 
     public static final class Builder {
-        private int                  httpPort        = 8080;
-        private VectorCache.Config   cacheConfig     = VectorCache.Config.builder().build();
-        private String               accessLogPath   = "vector-cache-access.log";
-        private boolean              accessLogAsync  = true;
-        private int                  httpThreads     = Math.max(4, Runtime.getRuntime().availableProcessors() * 2);
-        private boolean              allowSingleton  = true;   // enforce single instance
+        private int httpPort = 8080;
+        private VectorCache.Config cacheConfig = VectorCache.Config.builder().build();
+        private String accessLogPath = "vector-cache-access.log";
+        private boolean accessLogAsync = true;
+        private int httpThreads = Math.max(4, Runtime.getRuntime().availableProcessors() * 2);
+        private boolean allowSingleton = true; // enforce single instance
 
         /** HTTP port to listen on. Default: 8080. */
-        public Builder httpPort(int port)                     { this.httpPort = port;       return this; }
+        public Builder httpPort(int port) {
+            this.httpPort = port;
+            return this;
+        }
 
         /** Full {@link VectorCache.Config} for the underlying cache. */
-        public Builder cacheConfig(VectorCache.Config cfg)   { this.cacheConfig = cfg;     return this; }
+        public Builder cacheConfig(VectorCache.Config cfg) {
+            this.cacheConfig = cfg;
+            return this;
+        }
 
         /** Path (relative or absolute) for the access log file. */
-        public Builder accessLogPath(String path)            { this.accessLogPath = path;  return this; }
+        public Builder accessLogPath(String path) {
+            this.accessLogPath = path;
+            return this;
+        }
 
         /** Write access log entries asynchronously (recommended for production). */
-        public Builder accessLogAsync(boolean async)         { this.accessLogAsync = async; return this; }
+        public Builder accessLogAsync(boolean async) {
+            this.accessLogAsync = async;
+            return this;
+        }
 
         /** Number of HTTP handler threads. Default: 2× CPU cores, min 4. */
-        public Builder httpThreads(int n)                    { this.httpThreads = n;       return this; }
+        public Builder httpThreads(int n) {
+            this.httpThreads = n;
+            return this;
+        }
 
         /**
-         * Builds the server, registers the singleton, and returns it.
+         * Builds the server, registers the singleton, and returns it.F
          * Throws {@link IllegalStateException} if a singleton already exists and
          * {@code allowSingleton} is true (default).
          */
@@ -109,7 +129,7 @@ public class VectorCacheServer {
             if (allowSingleton && INSTANCE != null)
                 throw new IllegalStateException(
                         "VectorCacheServer singleton already exists. "
-                        + "Call VectorCacheServer.getInstance() or shutdown() the existing instance first.");
+                                + "Call VectorCacheServer.getInstance() or shutdown() the existing instance first.");
             VectorCacheServer srv = new VectorCacheServer(this);
             INSTANCE = srv;
             return srv;
@@ -123,41 +143,40 @@ public class VectorCacheServer {
     /**
      * Minimalistic TSV access logger.
      *
-     * <p>Log line columns (tab-separated):
+     * <p>
+     * Log line columns (tab-separated):
      * <ol>
-     *   <li>timestamp (ISO-8601 ms precision)</li>
-     *   <li>HTTP method</li>
-     *   <li>request path</li>
-     *   <li>key / id extracted from path or body (or "-")</li>
-     *   <li>logical operation (PUT, GET, DELETE, SEARCH_TOPK, …)</li>
-     *   <li>HTTP status code</li>
-     *   <li>duration ms</li>
-     *   <li>remote address</li>
+     * <li>timestamp (ISO-8601 ms precision)</li>
+     * <li>HTTP method</li>
+     * <li>request path</li>
+     * <li>key / id extracted from path or body (or "-")</li>
+     * <li>logical operation (PUT, GET, DELETE, SEARCH_TOPK, …)</li>
+     * <li>HTTP status code</li>
+     * <li>duration ms</li>
+     * <li>remote address</li>
      * </ol>
      */
     static final class AccessLogger {
 
-        private static final DateTimeFormatter TS_FMT =
-                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-                        .withZone(ZoneOffset.UTC);
+        private static final DateTimeFormatter TS_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+                .withZone(ZoneOffset.UTC);
 
-        private static final String HEADER =
-                "timestamp\tmethod\tpath\tkey\toperation\tstatus\tdurationMs\tremoteAddr";
+        private static final String HEADER = "timestamp\tmethod\tpath\tkey\toperation\tstatus\tdurationMs\tremoteAddr";
 
-        private final Path               logPath;
-        private final boolean            async;
-        private final ExecutorService    writer;   // single-thread for async writes
-        private final AtomicLong         lineCount = new AtomicLong();
+        private final Path logPath;
+        private final boolean async;
+        private final ExecutorService writer; // single-thread for async writes
+        private final AtomicLong lineCount = new AtomicLong();
 
         AccessLogger(String logPath, boolean async) {
             this.logPath = Path.of(logPath);
-            this.async   = async;
-            this.writer  = async
+            this.async = async;
+            this.writer = async
                     ? Executors.newSingleThreadExecutor(r -> {
-                          Thread t = new Thread(r, "AccessLog-Writer");
-                          t.setDaemon(true);
-                          return t;
-                      })
+                        Thread t = new Thread(r, "AccessLog-Writer");
+                        t.setDaemon(true);
+                        return t;
+                    })
                     : null;
             initFile();
         }
@@ -165,7 +184,8 @@ public class VectorCacheServer {
         private void initFile() {
             try {
                 Path parent = logPath.getParent();
-                if (parent != null) Files.createDirectories(parent);
+                if (parent != null)
+                    Files.createDirectories(parent);
                 if (!Files.exists(logPath)) {
                     Files.writeString(logPath, HEADER + System.lineSeparator(),
                             StandardOpenOption.CREATE, StandardOpenOption.WRITE);
@@ -176,7 +196,7 @@ public class VectorCacheServer {
         }
 
         void log(String method, String path, String key, String operation,
-                 int status, long durationMs, String remoteAddr) {
+                int status, long durationMs, String remoteAddr) {
             String line = String.join("\t",
                     TS_FMT.format(Instant.now()),
                     method,
@@ -185,8 +205,7 @@ public class VectorCacheServer {
                     operation,
                     String.valueOf(status),
                     String.valueOf(durationMs),
-                    remoteAddr
-            ) + System.lineSeparator();
+                    remoteAddr) + System.lineSeparator();
 
             if (async && writer != null) {
                 writer.submit(() -> appendLine(line));
@@ -207,14 +226,22 @@ public class VectorCacheServer {
             }
         }
 
-        long lineCount()  { return lineCount.get(); }
-        String logPath()  { return logPath.toAbsolutePath().toString(); }
+        long lineCount() {
+            return lineCount.get();
+        }
+
+        String logPath() {
+            return logPath.toAbsolutePath().toString();
+        }
 
         void shutdown() {
             if (writer != null) {
                 writer.shutdown();
-                try { writer.awaitTermination(3, TimeUnit.SECONDS); }
-                catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+                try {
+                    writer.awaitTermination(3, TimeUnit.SECONDS);
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
@@ -227,17 +254,24 @@ public class VectorCacheServer {
     private static final class Json {
 
         static String obj(Object... kvPairs) {
-            if (kvPairs.length % 2 != 0) throw new IllegalArgumentException("Pairs required");
+            if (kvPairs.length % 2 != 0)
+                throw new IllegalArgumentException("Pairs required");
             StringBuilder sb = new StringBuilder("{");
             for (int i = 0; i < kvPairs.length; i += 2) {
-                if (i > 0) sb.append(',');
+                if (i > 0)
+                    sb.append(',');
                 sb.append('"').append(kvPairs[i]).append("\":");
                 Object v = kvPairs[i + 1];
-                if      (v == null)             sb.append("null");
-                else if (v instanceof Number)   sb.append(v);
-                else if (v instanceof Boolean)  sb.append(v);
-                else if (v instanceof String s) sb.append('"').append(escape(s)).append('"');
-                else                            sb.append(v);  // pre-built JSON fragment
+                if (v == null)
+                    sb.append("null");
+                else if (v instanceof Number)
+                    sb.append(v);
+                else if (v instanceof Boolean)
+                    sb.append(v);
+                else if (v instanceof String s)
+                    sb.append('"').append(escape(s)).append('"');
+                else
+                    sb.append(v); // pre-built JSON fragment
             }
             return sb.append('}').toString();
         }
@@ -254,17 +288,24 @@ public class VectorCacheServer {
                     .replace("\t", "\\t");
         }
 
-        /** Parse a named string field from a JSON-ish string — good enough for internal use. */
+        /**
+         * Parse a named string field from a JSON-ish string — good enough for internal
+         * use.
+         */
         static String strField(String json, String key) {
             String pattern = "\"" + key + "\"";
             int ki = json.indexOf(pattern);
-            if (ki < 0) return null;
+            if (ki < 0)
+                return null;
             int colon = json.indexOf(':', ki + pattern.length());
-            if (colon < 0) return null;
+            if (colon < 0)
+                return null;
             int q1 = json.indexOf('"', colon + 1);
-            if (q1 < 0) return null;
+            if (q1 < 0)
+                return null;
             int q2 = json.indexOf('"', q1 + 1);
-            if (q2 < 0) return null;
+            if (q2 < 0)
+                return null;
             return json.substring(q1 + 1, q2);
         }
 
@@ -272,11 +313,14 @@ public class VectorCacheServer {
         static float[] floatArrayField(String json, String key) {
             String pattern = "\"" + key + "\"";
             int ki = json.indexOf(pattern);
-            if (ki < 0) return null;
+            if (ki < 0)
+                return null;
             int ab = json.indexOf('[', ki + pattern.length());
-            if (ab < 0) return null;
+            if (ab < 0)
+                return null;
             int ae = json.indexOf(']', ab);
-            if (ae < 0) return null;
+            if (ae < 0)
+                return null;
             String[] parts = json.substring(ab + 1, ae).split(",");
             float[] result = new float[parts.length];
             for (int i = 0; i < parts.length; i++)
@@ -288,14 +332,18 @@ public class VectorCacheServer {
         static int intField(String json, String key, int defaultValue) {
             String pattern = "\"" + key + "\"";
             int ki = json.indexOf(pattern);
-            if (ki < 0) return defaultValue;
+            if (ki < 0)
+                return defaultValue;
             int colon = json.indexOf(':', ki + pattern.length());
-            if (colon < 0) return defaultValue;
+            if (colon < 0)
+                return defaultValue;
             StringBuilder sb = new StringBuilder();
             for (int i = colon + 1; i < json.length(); i++) {
                 char c = json.charAt(i);
-                if (Character.isDigit(c) || c == '-') sb.append(c);
-                else if (!sb.isEmpty()) break;
+                if (Character.isDigit(c) || c == '-')
+                    sb.append(c);
+                else if (!sb.isEmpty())
+                    break;
             }
             return sb.isEmpty() ? defaultValue : Integer.parseInt(sb.toString());
         }
@@ -304,14 +352,18 @@ public class VectorCacheServer {
         static double doubleField(String json, String key, double defaultValue) {
             String pattern = "\"" + key + "\"";
             int ki = json.indexOf(pattern);
-            if (ki < 0) return defaultValue;
+            if (ki < 0)
+                return defaultValue;
             int colon = json.indexOf(':', ki + pattern.length());
-            if (colon < 0) return defaultValue;
+            if (colon < 0)
+                return defaultValue;
             StringBuilder sb = new StringBuilder();
             for (int i = colon + 1; i < json.length(); i++) {
                 char c = json.charAt(i);
-                if (Character.isDigit(c) || c == '-' || c == '.') sb.append(c);
-                else if (!sb.isEmpty()) break;
+                if (Character.isDigit(c) || c == '-' || c == '.')
+                    sb.append(c);
+                else if (!sb.isEmpty())
+                    break;
             }
             return sb.isEmpty() ? defaultValue : Double.parseDouble(sb.toString());
         }
@@ -328,7 +380,9 @@ public class VectorCacheServer {
     abstract class BaseHandler implements HttpHandler {
         private final String operation;
 
-        BaseHandler(String operation) { this.operation = operation; }
+        BaseHandler(String operation) {
+            this.operation = operation;
+        }
 
         @Override
         public final void handle(HttpExchange ex) throws IOException {
@@ -337,7 +391,7 @@ public class VectorCacheServer {
             int status = 200;
             try {
                 // CORS
-                ex.getResponseHeaders().add("Access-Control-Allow-Origin",  "*");
+                ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
                 ex.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
                 ex.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization");
                 ex.getResponseHeaders().add("Content-Type", "application/json; charset=utf-8");
@@ -365,7 +419,8 @@ public class VectorCacheServer {
                         ex.getRequestURI().getPath(),
                         key, operation, status, dur,
                         ex.getRemoteAddress() != null
-                                ? ex.getRemoteAddress().toString() : "-");
+                                ? ex.getRemoteAddress().toString()
+                                : "-");
             }
         }
 
@@ -374,7 +429,9 @@ public class VectorCacheServer {
         private void send(HttpExchange ex, int status, String body) throws IOException {
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             ex.sendResponseHeaders(status, bytes.length);
-            try (OutputStream os = ex.getResponseBody()) { os.write(bytes); }
+            try (OutputStream os = ex.getResponseBody()) {
+                os.write(bytes);
+            }
         }
     }
 
@@ -384,15 +441,15 @@ public class VectorCacheServer {
 
     static final class HandlerContext {
         final HttpExchange ex;
-        final String       method;
-        final String       path;
-        final String       body;
+        final String method;
+        final String path;
+        final String body;
 
         HandlerContext(HttpExchange ex) throws IOException {
-            this.ex     = ex;
+            this.ex = ex;
             this.method = ex.getRequestMethod();
-            this.path   = ex.getRequestURI().getPath();
-            this.body   = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            this.path = ex.getRequestURI().getPath();
+            this.body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         }
 
         /** Extracts the last path segment as the cache key. */
@@ -403,11 +460,25 @@ public class VectorCacheServer {
     }
 
     record HandlerResult(int status, String body) {
-        static HandlerResult ok(String body)      { return new HandlerResult(200, body); }
-        static HandlerResult created(String body) { return new HandlerResult(201, body); }
-        static HandlerResult noContent()          { return new HandlerResult(204, ""); }
-        static HandlerResult notFound(String msg) { return new HandlerResult(404, Json.obj("error", msg)); }
-        static HandlerResult badRequest(String m) { return new HandlerResult(400, Json.obj("error", m)); }
+        static HandlerResult ok(String body) {
+            return new HandlerResult(200, body);
+        }
+
+        static HandlerResult created(String body) {
+            return new HandlerResult(201, body);
+        }
+
+        static HandlerResult noContent() {
+            return new HandlerResult(204, "");
+        }
+
+        static HandlerResult notFound(String msg) {
+            return new HandlerResult(404, Json.obj("error", msg));
+        }
+
+        static HandlerResult badRequest(String m) {
+            return new HandlerResult(400, Json.obj("error", m));
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -415,19 +486,19 @@ public class VectorCacheServer {
     // ═══════════════════════════════════════════════════════════════
 
     private final VectorCache<Map<String, String>> cache;
-    private final HttpServer                       httpServer;
-    private final AccessLogger                     accessLogger;
-    private final int                              httpPort;
-    private volatile boolean                       running = false;
+    private final HttpServer httpServer;
+    private final AccessLogger accessLogger;
+    private final int httpPort;
+    private volatile boolean running = false;
 
     // ═══════════════════════════════════════════════════════════════
     // Private constructor (use Builder)
     // ═══════════════════════════════════════════════════════════════
 
-    @SuppressWarnings("unchecked")
+    
     private VectorCacheServer(Builder b) {
-        this.httpPort     = b.httpPort;
-        this.cache        = new VectorCache<>(b.cacheConfig);
+        this.httpPort = b.httpPort;
+        this.cache = new VectorCache<>(b.cacheConfig);
         this.accessLogger = new AccessLogger(b.accessLogPath, b.accessLogAsync);
 
         try {
@@ -449,17 +520,24 @@ public class VectorCacheServer {
     // ═══════════════════════════════════════════════════════════════
 
     private void registerRoutes() {
-        // /cache/{id}  — GET / PUT / DELETE
+        // /cache/{id} — GET / PUT / DELETE
         httpServer.createContext("/cache/", new BaseHandler("CRUD") {
-            @Override HandlerResult handleRequest(HandlerContext ctx) {
+            @Override
+            HandlerResult handleRequest(HandlerContext ctx) {
                 // Delegate to sub-path specific methods
                 String path = ctx.path;
-                if (path.startsWith("/cache/search/topk"))      return handleSearchTopK(ctx);
-                if (path.startsWith("/cache/search/threshold")) return handleSearchThreshold(ctx);
-                if (path.startsWith("/cache/flush"))            return handleFlush(ctx);
-                if (path.startsWith("/cache/session/start"))    return handleSessionStart(ctx);
-                if (path.startsWith("/cache/data-changed"))     return handleDataChanged(ctx);
-                if (path.equals("/cache/stats"))                return handleStats(ctx);
+                if (path.startsWith("/cache/search/topk"))
+                    return handleSearchTopK(ctx);
+                if (path.startsWith("/cache/search/threshold"))
+                    return handleSearchThreshold(ctx);
+                if (path.startsWith("/cache/flush"))
+                    return handleFlush(ctx);
+                if (path.startsWith("/cache/session/start"))
+                    return handleSessionStart(ctx);
+                if (path.startsWith("/cache/data-changed"))
+                    return handleDataChanged(ctx);
+                if (path.equals("/cache/stats"))
+                    return handleStats(ctx);
 
                 // Key-level operations
                 String key = extractKey(ctx.path, "/cache/");
@@ -467,23 +545,23 @@ public class VectorCacheServer {
                     return HandlerResult.badRequest("Missing key in path");
 
                 return switch (ctx.method) {
-                    case "PUT"    -> handlePut(ctx, key);
-                    case "GET"    -> handleGet(ctx, key);
+                    case "PUT" -> handlePut(ctx, key);
+                    case "GET" -> handleGet(ctx, key);
                     case "DELETE" -> handleDelete(ctx, key);
-                    default       -> new HandlerResult(405, Json.obj("error", "Method not allowed"));
+                    default -> new HandlerResult(405, Json.obj("error", "Method not allowed"));
                 };
             }
         });
 
         // /health
         httpServer.createContext("/health", new BaseHandler("HEALTH") {
-            @Override HandlerResult handleRequest(HandlerContext ctx) {
+            @Override
+            HandlerResult handleRequest(HandlerContext ctx) {
                 return HandlerResult.ok(Json.obj(
                         "status", "UP",
                         "cacheSize", cache.size(),
                         "usedMemoryBytes", cache.usedMemoryBytes(),
-                        "timestamp", Instant.now().toString()
-                ));
+                        "timestamp", Instant.now().toString()));
             }
         });
     }
@@ -540,19 +618,19 @@ public class VectorCacheServer {
      */
     private HandlerResult handleSearchTopK(HandlerContext ctx) {
         float[] query = Json.floatArrayField(ctx.body, "embedding");
-        if (query == null) return HandlerResult.badRequest("'embedding' is required");
+        if (query == null)
+            return HandlerResult.badRequest("'embedding' is required");
         int topK = Json.intField(ctx.body, "topK", 10);
 
-        List<VectorCache.SimilarityResult<Map<String, String>>> results =
-                cache.searchTopK(query, topK);
+        List<VectorCache.SimilarityResult<Map<String, String>>> results = cache.searchTopK(query, topK);
 
         List<String> items = results.stream()
                 .map(r -> Json.obj(
-                        "id",    r.entry().getId(),
+                        "id", r.entry().getId(),
                         "score", r.score(),
                         "namespace", r.entry().getNamespace() != null ? r.entry().getNamespace() : "",
                         "ttlRemainingMs", r.entry().remainingTtlMs(),
-                        "meta",  metaToJson(r.entry().getMetadata())))
+                        "meta", metaToJson(r.entry().getMetadata())))
                 .toList();
 
         return HandlerResult.ok(Json.obj(
@@ -567,19 +645,19 @@ public class VectorCacheServer {
      */
     private HandlerResult handleSearchThreshold(HandlerContext ctx) {
         float[] query = Json.floatArrayField(ctx.body, "embedding");
-        if (query == null) return HandlerResult.badRequest("'embedding' is required");
+        if (query == null)
+            return HandlerResult.badRequest("'embedding' is required");
         double threshold = Json.doubleField(ctx.body, "threshold", 0.8);
 
-        List<VectorCache.SimilarityResult<Map<String, String>>> results =
-                cache.searchByThreshold(query, threshold);
+        List<VectorCache.SimilarityResult<Map<String, String>>> results = cache.searchByThreshold(query, threshold);
 
         List<String> items = results.stream()
                 .map(r -> Json.obj(
-                        "id",    r.entry().getId(),
+                        "id", r.entry().getId(),
                         "score", r.score(),
                         "namespace", r.entry().getNamespace() != null ? r.entry().getNamespace() : "",
                         "ttlRemainingMs", r.entry().remainingTtlMs(),
-                        "meta",  metaToJson(r.entry().getMetadata())))
+                        "meta", metaToJson(r.entry().getMetadata())))
                 .toList();
 
         return HandlerResult.ok(Json.obj(
@@ -590,19 +668,22 @@ public class VectorCacheServer {
 
     /**
      * POST /cache/flush
-     * Body: { "mode": "all"|"namespace"|"expired"|"older_than_ms" , "namespace": "ns", "olderThanMs": 300000 }
+     * Body: { "mode": "all"|"namespace"|"expired"|"older_than_ms" , "namespace":
+     * "ns", "olderThanMs": 300000 }
      */
     private HandlerResult handleFlush(HandlerContext ctx) {
         String mode = Json.strField(ctx.body, "mode");
-        if (mode == null) mode = "all";
+        if (mode == null)
+            mode = "all";
 
         VectorCache.FlushResult result = switch (mode) {
             case "namespace" -> {
                 String ns = Json.strField(ctx.body, "namespace");
-                if (ns == null) yield null;
+                if (ns == null)
+                    yield null;
                 yield cache.flushNamespace(ns);
             }
-            case "expired"   -> cache.flushExpired();
+            case "expired" -> cache.flushExpired();
             case "older_than_ms" -> {
                 long ms = (long) Json.doubleField(ctx.body, "olderThanMs", 600_000);
                 long cutoff = System.currentTimeMillis() - ms;
@@ -642,7 +723,7 @@ public class VectorCacheServer {
 
     /**
      * POST /cache/data-changed
-     * Body: { "namespace": "products" }  — omit or null for full flush
+     * Body: { "namespace": "products" } — omit or null for full flush
      */
     private HandlerResult handleDataChanged(HandlerContext ctx) {
         String namespace = Json.strField(ctx.body, "namespace");
@@ -679,7 +760,8 @@ public class VectorCacheServer {
 
     /** Starts the HTTP server and registers a JVM shutdown hook. */
     public VectorCacheServer start() {
-        if (running) throw new IllegalStateException("Server is already running");
+        if (running)
+            throw new IllegalStateException("Server is already running");
         httpServer.start();
         running = true;
         System.out.printf("[VectorCacheServer] HTTP listening on http://0.0.0.0:%d%n", httpPort);
@@ -696,28 +778,39 @@ public class VectorCacheServer {
 
     /** Gracefully stops the server and releases all resources. */
     public void shutdown() {
-        if (!running) return;
+        if (!running)
+            return;
         running = false;
-        httpServer.stop(3);       // 3s grace period for in-flight requests
+        httpServer.stop(3); // 3s grace period for in-flight requests
         cache.shutdown();
         accessLogger.shutdown();
         INSTANCE = null;
         System.out.println("[VectorCacheServer] Shutdown complete.");
     }
 
-    public boolean isRunning()            { return running; }
-    public int     httpPort()             { return httpPort; }
-    public VectorCache<Map<String,String>> cache() { return cache; }
+    public boolean isRunning() {
+        return running;
+    }
+
+    public int httpPort() {
+        return httpPort;
+    }
+
+    public VectorCache<Map<String, String>> cache() {
+        return cache;
+    }
 
     // ═══════════════════════════════════════════════════════════════
     // Private utilities
     // ═══════════════════════════════════════════════════════════════
 
     private static String extractKey(String path, String prefix) {
-        if (!path.startsWith(prefix)) return null;
+        if (!path.startsWith(prefix))
+            return null;
         String tail = path.substring(prefix.length());
         // Strip trailing slash if any
-        if (tail.endsWith("/")) tail = tail.substring(0, tail.length() - 1);
+        if (tail.endsWith("/"))
+            tail = tail.substring(0, tail.length() - 1);
         return tail;
     }
 
@@ -736,7 +829,8 @@ public class VectorCacheServer {
     }
 
     private static String metaToJson(Map<String, String> meta) {
-        if (meta == null || meta.isEmpty()) return "{}";
+        if (meta == null || meta.isEmpty())
+            return "{}";
         String inner = meta.entrySet().stream()
                 .map(e -> "\"" + Json.escape(e.getKey()) + "\":\"" + Json.escape(e.getValue()) + "\"")
                 .collect(Collectors.joining(","));
@@ -746,14 +840,16 @@ public class VectorCacheServer {
     private static String floatsToString(float[] arr) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < arr.length; i++) {
-            if (i > 0) sb.append(',');
+            if (i > 0)
+                sb.append(',');
             sb.append(arr[i]);
         }
         return sb.toString();
     }
 
     /**
-     * Scans the raw JSON body for top-level string fields and adds them to {@code target},
+     * Scans the raw JSON body for top-level string fields and adds them to
+     * {@code target},
      * skipping fields named in {@code skip}.
      */
     private static void extractMetaFields(String json, Map<String, String> target, String... skip) {
@@ -762,20 +858,26 @@ public class VectorCacheServer {
         int i = 0;
         while (i < json.length()) {
             int ks = json.indexOf('"', i);
-            if (ks < 0) break;
+            if (ks < 0)
+                break;
             int ke = json.indexOf('"', ks + 1);
-            if (ke < 0) break;
+            if (ke < 0)
+                break;
             String fieldName = json.substring(ks + 1, ke);
             int colon = json.indexOf(':', ke + 1);
-            if (colon < 0) break;
+            if (colon < 0)
+                break;
             // Skip whitespace
             int vs = colon + 1;
-            while (vs < json.length() && Character.isWhitespace(json.charAt(vs))) vs++;
-            if (vs >= json.length()) break;
+            while (vs < json.length() && Character.isWhitespace(json.charAt(vs)))
+                vs++;
+            if (vs >= json.length())
+                break;
             char firstChar = json.charAt(vs);
             if (firstChar == '"') {
                 int ve = json.indexOf('"', vs + 1);
-                if (ve < 0) break;
+                if (ve < 0)
+                    break;
                 String val = json.substring(vs + 1, ve);
                 if (!skipSet.contains(fieldName) && !fieldName.isBlank())
                     target.put(fieldName, val);
@@ -785,83 +887,5 @@ public class VectorCacheServer {
                 i = colon + 1;
             }
         }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Entry point
-    // ═══════════════════════════════════════════════════════════════
-
-    public static void main(String[] args) throws InterruptedException {
-        int port = args.length > 0 ? Integer.parseInt(args[0]) : 8080;
-
-        VectorCacheServer server = VectorCacheServer.builder()
-                .httpPort(port)
-                .cacheConfig(VectorCache.Config.builder()
-                        .capacity(50_000)
-                        .maxMemoryMb(256)
-                        .ttlMs(TimeUnit.MINUTES.toMillis(30))
-                        .reaperIntervalMs(TimeUnit.MINUTES.toMillis(2))
-                        .parallelism(Runtime.getRuntime().availableProcessors())
-                        .build())
-                .accessLogPath("logs/vector-cache-access.log")
-                .accessLogAsync(true)
-                .httpThreads(8)
-                .build()
-                .start();
-
-        System.out.println("\n── Quick-smoke using the running server ──");
-        Thread.sleep(200); // tiny pause for server to bind
-        String base = "http://localhost:" + port;
-        try {
-            httpPut(base + "/cache/doc:1",
-                    "{\"embedding\":[1.0,0.8,0.1,0.2],\"namespace\":\"docs\",\"label\":\"fruit\"}");
-            httpPut(base + "/cache/doc:2",
-                    "{\"embedding\":[0.1,0.2,0.9,0.8],\"namespace\":\"docs\",\"label\":\"vehicle\"}");
-            System.out.println("PUT doc:1, doc:2 -> OK");
-            String got = httpGet(base + "/cache/doc:1");
-            System.out.println("GET doc:1 -> " + got.substring(0, Math.min(120, got.length())));
-            String topk = httpPost(base + "/cache/search/topk",
-                    "{\"embedding\":[1.0,0.9,0.05,0.1],\"topK\":2}");
-            System.out.println("SEARCH topK=2 -> " + topk.substring(0, Math.min(160, topk.length())));
-            System.out.println("STATS -> " + httpGet(base + "/cache/stats"));
-            System.out.println("HEALTH -> " + httpGet(base + "/health"));
-            System.out.println("DATA-CHANGED -> " + httpPost(base + "/cache/data-changed",
-                    "{\"namespace\":\"docs\"}"));
-        } catch (Exception e) {
-            System.err.println("Smoke-test error: " + e.getMessage());
-        }
-        System.out.println("\nServer running. Press Ctrl+C to stop.");
-        Thread.currentThread().join(); // block until shutdown hook fires
-    }
-
-    // ── tiny HTTP client helpers for the demo ────────────────────────
-
-    private static String httpGet(String url) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setRequestMethod("GET");
-        return readResponse(c);
-    }
-
-    private static String httpPut(String url, String body) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setRequestMethod("PUT");
-        c.setDoOutput(true);
-        c.setRequestProperty("Content-Type", "application/json");
-        c.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
-        return readResponse(c);
-    }
-
-    private static String httpPost(String url, String body) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setRequestMethod("POST");
-        c.setDoOutput(true);
-        c.setRequestProperty("Content-Type", "application/json");
-        c.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
-        return readResponse(c);
-    }
-
-    private static String readResponse(HttpURLConnection c) throws Exception {
-        InputStream is = c.getResponseCode() < 400 ? c.getInputStream() : c.getErrorStream();
-        return new String(is.readAllBytes(), StandardCharsets.UTF_8);
     }
 }

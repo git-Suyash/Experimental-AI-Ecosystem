@@ -5,7 +5,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.*;
 import java.util.function.Predicate;
-import java.util.stream.*;
+// import java.util.stream.*;
 
 /**
  * A thread-safe, high-performance in-memory vector cache.
@@ -796,84 +796,5 @@ public class VectorCache<M> {
     private static void validateEmbedding(float[] embedding) {
         if (embedding == null || embedding.length == 0)
             throw new IllegalArgumentException("Embedding must be non-null and non-empty");
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Demo
-    // ═══════════════════════════════════════════════════════════════
-
-    public static void main(String[] args) throws InterruptedException {
-        record Meta(String label, String source) {}
-
-        System.out.println("╔═══════════════════════════════════════╗");
-        System.out.println("║       VectorCache — Feature Demo       ║");
-        System.out.println("╚═══════════════════════════════════════╝\n");
-
-        // ── 1. Build with 64 MB cap, 3-second TTL, fast reaper ──────────────
-        var cache = new VectorCache<Meta>(
-                Config.builder()
-                      .capacity(1_000)
-                      .maxMemoryMb(64)
-                      .ttlMs(3_000)
-                      .reaperIntervalMs(1_000)
-                      .parallelism(4)
-                      .build());
-
-        System.out.println("Config  → " + cache.config());
-
-        // ── 2. Insert into two namespaces ────────────────────────────────────
-        cache.put("apple",  new float[]{1f, 0.8f, 0.1f, 0.2f},    new Meta("fruit",  "demo"), "fruits");
-        cache.put("banana", new float[]{0.9f, 0.7f, 0.2f, 0.1f},  new Meta("fruit",  "demo"), "fruits");
-        cache.put("mango",  new float[]{0.85f, 0.75f, 0.15f, 0.25f}, new Meta("fruit","demo"), "fruits");
-        cache.put("car",    new float[]{0.1f, 0.2f, 0.9f, 0.8f},  new Meta("vehicle","demo"), "vehicles");
-        cache.put("truck",  new float[]{0.2f, 0.1f, 0.8f, 0.9f},  new Meta("vehicle","demo"), "vehicles");
-
-        System.out.printf("%nInserted 5 entries → size=%d, mem=%d B%n",
-                cache.size(), cache.usedMemoryBytes());
-
-        // ── 3. Top-K search ──────────────────────────────────────────────────
-        float[] query = {1f, 0.9f, 0.05f, 0.1f};
-        System.out.println("\nTop-3 similar to query " + Arrays.toString(query) + ":");
-        cache.searchTopK(query, 3).forEach(r ->
-                System.out.printf("  %-8s  score=%.4f  ns=%-10s  ttl=%dms%n",
-                        r.entry().getId(), r.score(),
-                        r.entry().getNamespace(), r.entry().remainingTtlMs()));
-
-        // ── 4. onSessionStart ────────────────────────────────────────────────
-        System.out.println("\n── onSessionStart(\"user-99\") ──");
-        System.out.println("  " + cache.onSessionStart("user-99"));
-
-        // ── 5. onDataChanged — namespace flush ───────────────────────────────
-        System.out.println("\n── onDataChanged(\"vehicles\") ──");
-        System.out.println("  " + cache.onDataChanged("vehicles"));
-        System.out.println("  Remaining keys: " + cache.ids());
-
-        // ── 6. Wait for TTL expiry, then verify lazy miss + manual reap ──────
-        System.out.println("\n── Waiting 4 s for TTL expiry… ──");
-        Thread.sleep(4_000);
-        System.out.println("  get(\"apple\") after TTL → " + cache.get("apple"));
-        System.out.println("  Manual flushExpired   → " + cache.flushExpired());
-        System.out.println("  Size after reap: " + cache.size());
-
-        // ── 7. flushWhere — custom predicate ─────────────────────────────────
-        cache.put("oak",   new float[]{0.3f, 0.3f, 0.3f, 0.3f}, new Meta("tree", "demo"), "flora");
-        cache.put("maple", new float[]{0.4f, 0.4f, 0.4f, 0.4f}, new Meta("tree", "demo"), "flora");
-        cache.put("elm",   new float[]{0.35f,0.35f,0.35f,0.35f},new Meta("tree", "demo"), "flora");
-        System.out.println("\n── flushWhere(label == \"tree\") ──");
-        FlushResult r = cache.flushWhere(
-                e -> e.getMetadata() != null && "tree".equals(e.getMetadata().label()),
-                "remove-all-trees");
-        System.out.println("  " + r);
-
-        // ── 8. flushAll — simulating full corpus re-index ────────────────────
-        cache.put("fig",  new float[]{0.5f, 0.5f, 0.5f, 0.5f}, new Meta("fruit","demo"), "fruits");
-        cache.put("plum", new float[]{0.6f, 0.6f, 0.6f, 0.6f}, new Meta("fruit","demo"), "fruits");
-        System.out.println("\n── flushAll() (corpus re-index) ──");
-        System.out.println("  " + cache.flushAll());
-        System.out.println("  Size after flushAll: " + cache.size());
-
-        // ── 9. Final stats ───────────────────────────────────────────────────
-        System.out.println("\n" + cache.stats());
-        cache.shutdown();
     }
 }
