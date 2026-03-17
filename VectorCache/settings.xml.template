@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~/.m2/settings.xml — Maven credentials template
+  Copy this file to ~/.m2/settings.xml and fill in your actual credentials.
+  Never commit this file to version control.
+
+  Credentials are read from here by maven-gpg-plugin (release signing)
+  and by the distributionManagement repositories in pom.xml (deploy).
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0
+                              https://maven.apache.org/xsd/settings-1.2.0.xsd">
+
+  <servers>
+
+    <!-- ── OSSRH / Maven Central (Sonatype) ──────────────────────── -->
+    <!-- Register at https://issues.sonatype.org to get credentials. -->
+    <server>
+      <id>ossrh</id>
+      <username>YOUR_SONATYPE_USERNAME</username>
+      <password>YOUR_SONATYPE_TOKEN</password>
+    </server>
+
+    <!-- ── Private Nexus (internal deployment) ───────────────────── -->
+    <!--
+    <server>
+      <id>nexus-releases</id>
+      <username>deployer</username>
+      <password>NEXUS_PASSWORD</password>
+    </server>
+    <server>
+      <id>nexus-snapshots</id>
+      <username>deployer</username>
+      <password>NEXUS_PASSWORD</password>
+    </server>
+    -->
+
+    <!-- ── GitHub Packages ───────────────────────────────────────── -->
+    <!--
+    <server>
+      <id>github</id>
+      <username>YOUR_GITHUB_USERNAME</username>
+      <password>YOUR_GITHUB_PAT</password>
+    </server>
+    -->
+
+  </servers>
+
+  <profiles>
+    <profile>
+      <id>release</id>
+      <properties>
+        <!-- GPG key fingerprint to sign release artifacts -->
+        <gpg.keyname>YOUR_GPG_KEY_FINGERPRINT</gpg.keyname>
+        <!-- Optional: passphrase (avoid storing here; use gpg-agent instead) -->
+        <!-- <gpg.passphrase>YOUR_PASSPHRASE</gpg.passphrase> -->
+      </properties>
+    </profile>
+  </profiles>
+
+</settings>

@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Coordinates — used by other projects to declare a dependency:
+         <dependency>
+           <groupId>io.vectorcache</groupId>
+           <artifactId>vectorcache</artifactId>
+           <version>1.0.0</version>
+         </dependency>
+       ═══════════════════════════════════════════════════════════════ -->
+  <groupId>io.vectorcache</groupId>
+  <artifactId>vectorcache</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>VectorCache</name>
+  <description>
+    Thread-safe, high-performance in-memory vector cache with cosine similarity
+    search, TTL, LRU/memory-ceiling eviction, and an embedded HTTP REST server.
+    Ships as both a plain library JAR (for dependency use) and a self-contained
+    executable fat-JAR (for deployment as a standalone cache service).
+  </description>
+  <url>https://github.com/your-org/vectorcache</url>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Global properties
+       ═══════════════════════════════════════════════════════════════ -->
+  <properties>
+    <java.version>21</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Dependency versions — centralised so bumps touch one place -->
+    <junit.version>5.10.2</junit.version>
+    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+    <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+    <maven-shade-plugin.version>3.5.3</maven-shade-plugin.version>
+    <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+    <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
+    <maven-assembly-plugin.version>3.7.1</maven-assembly-plugin.version>
+
+    <!-- Fat-JAR entry point for standalone server mode -->
+    <main.class>io.vectorcache.VectorCacheServer</main.class>
+  </properties>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Dependencies
+       Zero runtime dependencies — the library ships with no third-party
+       runtime JARs. JUnit 5 is test-scoped only.
+       ═══════════════════════════════════════════════════════════════ -->
+  <dependencies>
+
+    <!-- JUnit 5 — test scope only, not included in any shipped artifact -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Build
+       ═══════════════════════════════════════════════════════════════ -->
+  <build>
+    <plugins>
+
+      <!-- ── 1. Compiler: enforce Java 21, enable preview features ── -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+          <encoding>UTF-8</encoding>
+          <compilerArgs>
+            <arg>-Xlint:unchecked</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
+      <!-- ── 2. Surefire: run JUnit 5 tests ─────────────────────── -->
+      <!--
+           Our test suite is currently a standalone main-method runner
+           (VectorCacheTestSuite). The exec:java execution below runs it
+           directly. If you migrate tests to JUnit 5 @Test methods, Surefire
+           will pick them up automatically via the jupiter provider.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
+        <configuration>
+          <!-- Skip default Surefire scan; we run our bespoke suite via exec -->
+          <skipTests>true</skipTests>
+        </configuration>
+      </plugin>
+
+      <!-- ── 3. Library JAR: plain jar with manifest metadata ──── -->
+      <!--
+           This is the PRIMARY artifact — the thin library JAR that consumers
+           add as a Maven dependency. It contains only the compiled classes
+           (no fat-jar merging). Installed to the local repo by `mvn install`,
+           deployed to a remote repo by `mvn deploy`.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>${maven-jar-plugin.version}</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>false</addClasspath>
+              <mainClass>${main.class}</mainClass>
+            </manifest>
+            <manifestEntries>
+              <Built-By>VectorCache Build</Built-By>
+              <Implementation-Title>${project.name}</Implementation-Title>
+              <Implementation-Version>${project.version}</Implementation-Version>
+            </manifestEntries>
+          </archive>
+          <!-- Explicit output name for the thin library jar -->
+          <finalName>${project.artifactId}-${project.version}</finalName>
+        </configuration>
+      </plugin>
+
+      <!-- ── 4. Shade plugin: executable fat-JAR ────────────────── -->
+      <!--
+           Produces  vectorcache-1.0.0-server.jar  — a fully self-contained
+           JAR that bundles all dependencies and can be launched directly:
+
+             java -jar target/vectorcache-1.0.0-server.jar [port]
+
+           The classifier "server" keeps this artifact separate from the
+           thin library JAR so both can coexist in a Maven repository.
+           Consumers that only want the library never touch this artifact.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>fat-jar</id>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>server</shadedClassifierName>
+              <createDependencyReducedPom>true</createDependencyReducedPom>
+              <filters>
+                <!-- Strip signing artifacts that would cause JAR verification failures -->
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>META-INF/MANIFEST.MF</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <!-- Set the entry point for java -jar -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>${main.class}</mainClass>
+                  <manifestEntries>
+                    <Implementation-Title>${project.name} Server</Implementation-Title>
+                    <Implementation-Version>${project.version}</Implementation-Version>
+                  </manifestEntries>
+                </transformer>
+                <!-- Merge service-loader files so JDK SPI still works after shading -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <!-- Aggregate licence notices from all bundled jars -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                  <addHeader>false</addHeader>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- ── 5. Sources JAR ─────────────────────────────────────── -->
+      <!--
+           Generates  vectorcache-1.0.0-sources.jar  — required by Maven
+           Central and useful for IDEs (jump-to-source on your dependency).
+           Attached automatically during the `package` phase.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>${maven-source-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>package</phase>
+            <goals><goal>jar-no-fork</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- ── 6. Javadoc JAR ─────────────────────────────────────── -->
+      <!--
+           Generates  vectorcache-1.0.0-javadoc.jar  — required for Maven
+           Central publication. Linting is intentionally lenient (doclint=none)
+           so builds don't fail on missing @param tags during development.
+           Tighten to -Xdoclint:all before a release.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${maven-javadoc-plugin.version}</version>
+        <configuration>
+          <doclint>none</doclint>
+          <quiet>true</quiet>
+          <source>${java.version}</source>
+        </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadoc</id>
+            <phase>package</phase>
+            <goals><goal>jar</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- ── 7. exec-maven-plugin: run the custom test suite ──── -->
+      <!--
+           `mvn verify` (or `mvn exec:java@run-tests`) compiles everything
+           and then runs VectorCacheTestSuite.main() directly. The JVM exit
+           code is propagated: non-zero fails the build.
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <executions>
+          <execution>
+            <id>run-tests</id>
+            <phase>verify</phase>
+            <goals><goal>java</goal></goals>
+            <configuration>
+              <mainClass>io.vectorcache.VectorCacheTestSuite</mainClass>
+              <classpathScope>test</classpathScope>
+              <cleanupDaemonThreads>false</cleanupDaemonThreads>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Profiles
+       ═══════════════════════════════════════════════════════════════ -->
+  <profiles>
+
+    <!-- ── release: sign artifacts for Maven Central ─────────────── -->
+    <!--
+         Activate with:  mvn deploy -P release
+         Requires GPG key configured in ~/.m2/settings.xml:
+           <settings>
+             <profiles>
+               <profile>
+                 <id>release</id>
+                 <properties>
+                   <gpg.keyname>YOUR_KEY_ID</gpg.keyname>
+                 </properties>
+               </profile>
+             </profiles>
+           </settings>
+    -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.4</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals><goal>sign</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- ── docker: build and tag the container image ─────────────── -->
+    <!--
+         Activate with:  mvn package -P docker
+         Requires Docker daemon running. Builds from docker/Dockerfile.
+    -->
+    <profile>
+      <id>docker</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.2.0</version>
+            <executions>
+              <execution>
+                <id>docker-build</id>
+                <phase>package</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration>
+                  <executable>docker</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>build</argument>
+                    <argument>-f</argument>
+                    <argument>docker/Dockerfile</argument>
+                    <argument>-t</argument>
+                    <argument>vectorcache:${project.version}</argument>
+                    <argument>-t</argument>
+                    <argument>vectorcache:latest</argument>
+                    <argument>.</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+  </profiles>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Distribution management
+       Replace the URLs below with your actual Nexus / Artifactory / OSSRH
+       repository URLs before running `mvn deploy`.
+       ═══════════════════════════════════════════════════════════════ -->
+  <distributionManagement>
+    <!-- Snapshots: deployed on every CI push (version must end in -SNAPSHOT) -->
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <!-- Releases: deployed manually via  mvn deploy -P release -->
+    <repository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+
+</project>
