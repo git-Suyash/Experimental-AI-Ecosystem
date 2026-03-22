@@ -7,7 +7,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-import java.util.function.Predicate;
+// import java.util.function.Predicate;
 
 /**
  * VectorCacheTestSuite — self-contained test suite for {@link VectorCache} and
