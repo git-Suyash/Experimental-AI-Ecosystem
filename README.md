@@ -7,6 +7,8 @@ This repo is my playground of exploring AI and building random stuff with the he
 
 - Refinery : Private enterprise Prompt,Skill, Agent Repository
 - VectorCache : simple embedding cache written in JAVA
+- Interactum : TOON/LSON inspired data serialization
+- PDFExtractor : Better data extraction pipeline for RAG - decoupled, LLM aware. 
 - AI-blement : Enterprise AI adoption framework
 
 ## Author
